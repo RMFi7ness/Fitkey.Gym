@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RM Fitness - Tu Progreso en Línea</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fitOrange: '#FF6600',
+                        fitDark: '#121212',
+                        fitCard: '#1E1E1E',
+                        fitGray: '#2A2A2A'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-fitDark text-white font-['Montserrat'] min-h-screen flex flex-col items-center justify-between p-4">
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="w-full max-w-lg bg-fitCard rounded-2xl shadow-2xl overflow-hidden border border-fitGray my-auto">
+        
+        <!-- ENCABEZADO -->
+        <div class="bg-fitOrange p-6 text-center text-fitDark font-black text-2xl tracking-wider uppercase">
+            RM <span class="text-white">Fitness</span>
+        </div>
+
+        <!-- SECCIÓN DE AUTENTICACIÓN (LOGIN / REGISTRO) -->
+        <div id="auth-section" class="p-6 space-y-4">
+            <h2 id="auth-title" class="text-xl font-bold text-center text-white">Acceso de Socios</h2>
+            <p class="text-xs text-center text-gray-400">Escanea tu llavero o ingresa con tu cuenta para ver tu rutina y progreso.</p>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Correo Electrónico</label>
+                    <input type="email" id="auth-email" placeholder="tucorreo@email.com" class="w-full p-3 bg-fitGray rounded-xl border border-gray-700 text-white focus:outline-none focus:border-fitOrange">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Contraseña</label>
+                    <input type="password" id="auth-password" placeholder="••••••••" class="w-full p-3 bg-fitGray rounded-xl border border-gray-700 text-white focus:outline-none focus:border-fitOrange">
+                </div>
+            </div>
+
+            <button onclick="handleAuth()" id="auth-btn" class="w-full py-3 bg-fitOrange text-fitDark font-bold rounded-xl uppercase tracking-wider hover:bg-orange-500 transition">Iniciar Sesión</button>
+            
+            <div class="text-center mt-3">
+                <button onclick="toggleAuthMode()" id="auth-toggle-btn" class="text-xs text-fitOrange hover:underline">¿No tienes cuenta? Regístrate aquí</button>
+            </div>
+            <p id="auth-error" class="text-xs text-red-500 text-center mt-2"></p>
+        </div>
+
+        <!-- SECCIÓN DE LA APLICACIÓN (OCULTA HASTA INICIAR SESIÓN) -->
+        <div id="app-section" class="p-6 space-y-6 hidden">
+            
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <div>
+                    <p class="text-xs text-gray-400">Bienvenido,</p>
+                    <span id="user-email-display" class="font-bold text-fitOrange text-sm"></span>
+                </div>
+                <button onclick="logout()" class="text-xs bg-fitGray hover:bg-gray-700 px-3 py-1.5 rounded-lg text-gray-300 transition">Cerrar Sesión</button>
+            </div>
+
+            <!-- PANTALLA 1: FORMULARIO DE DATOS -->
+            <div id="step-form" class="space-y-4">
+                <h3 class="font-bold text-lg text-white">Tus Datos Físicos</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Nombre</label>
+                        <input type="text" id="nombre" class="w-full p-3 bg-fitGray rounded-xl border border-gray-700 text-white focus:outline-none focus:border-fitOrange" placeholder="Tu nombre">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Edad</label>
+                        <input type="number" id="edad" class="w-full p-3 bg-fitGray rounded-xl border border-gray-700 text-white focus:outline-none focus:border-fitOrange" placeholder="Años">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Peso Inicial (kg)</label>
+                        <input type="number" step="0.1" id="peso" class="w-full p-3 bg-fitGray rounded-xl border border-gray-700 text-white focus:outline-none focus:border-fitOrange" placeholder="Ej: 75">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Días / Semana</label>
+                        <select id="dias" class="w-full p-3 bg-fitGray rounded-xl border border-gray-700 text-white focus:outline-none focus:border-fitOrange">
+                            <option value="3">3 Días</option>
+                            <option value="4">4 Días</option>
+                            <option value="5">5 Días</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase font-semibold text-gray-400 mb-1">Objetivo Principal</label>
+                    <select id="objetivo" class="w-full p-3 bg-fitGray rounded-xl border border-gray-700 text-white focus:outline-none focus:border-fitOrange">
+                        <option value="Hipertrofia">Ganar Músculo (Hipertrofia)</option>
+                        <option value="Definicion">Bajar Grasa (Definición)</option>
+                        <option value="Resistencia">Condición Física y Salud</option>
+                    </select>
+                </div>
+                <button onclick="guardarDatosYGenerar()" class="w-full py-3 bg-fitOrange text-fitDark font-bold rounded-xl uppercase tracking-wider hover:bg-orange-500 transition">Generar Rutina</button>
+            </div>
+
+            <!-- PANTALLA 2: RUTINA, GRÁFICO Y MEDIDAS -->
+            <div id="step-routine" class="space-y-6 hidden">
+                <!-- Rutina Detallada -->
+                <div class="bg-fitGray p-4 rounded-xl border border-gray-700">
+                    <h3 class="font-bold text-fitOrange mb-1">Tu Plan Personalizado</h3>
+                    <p id="resumen-perfil" class="text-xs text-gray-300 mb-3"></p>
+                    <div id="rutina-contenido" class="space-y-4 text-sm text-gray-200 max-h-80 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Sección de Progreso de Peso y Gráfico -->
+                <div class="bg-fitGray p-4 rounded-xl border border-gray-700 space-y-3">
+                    <h3 class="font-bold text-white text-sm">Actualizar Mi Peso Actual</h3>
+                    <div class="flex gap-2">
+                        <input type="number" step="0.1" id="nuevo-peso" placeholder="Nuevo peso (kg)" class="flex-1 p-2.5 bg-fitDark rounded-lg border border-gray-700 text-white text-sm">
+                        <button onclick="registrarProgreso()" class="bg-fitOrange text-fitDark px-4 py-2.5 rounded-lg font-bold text-sm hover:bg-orange-500 transition">Guardar</button>
+                    </div>
+                    
+                    <div class="mt-4 bg-fitDark p-3 rounded-xl border border-gray-800">
+                        <h4 class="text-xs uppercase font-bold text-fitOrange mb-2">Evolución de Peso</h4>
+                        <div class="w-full h-48">
+                            <canvas id="pesoChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN DE MEDIDAS DE MÚSCULOS -->
+                <div class="bg-fitGray p-4 rounded-xl border border-gray-700 space-y-3">
+                    <h3 class="font-bold text-white text-sm">Medidas Musculares (cm)</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-gray-400 mb-1">Músculo / Zona</label>
+                            <select id="musculo-nombre" class="w-full p-2.5 bg-fitDark rounded-lg border border-gray-700 text-white text-xs">
+                                <option value="Bíceps">Bíceps</option>
+                                <option value="Pecho">Pecho</option>
+                                <option value="Pierna / Muslo">Pierna / Muslo</option>
+                                <option value="Cintura">Cintura</option>
+                                <option value="Hombros">Hombros</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-gray-400 mb-1">Medida (cm)</label>
+                            <input type="number" step="0.5" id="musculo-valor" placeholder="Ej: 38" class="w-full p-2.5 bg-fitDark rounded-lg border border-gray-700 text-white text-xs">
+                        </div>
+                    </div>
+                    <button onclick="guardarMedidaMuscular()" class="w-full py-2 bg-fitOrange text-fitDark font-bold rounded-lg uppercase tracking-wider text-xs hover:bg-orange-500 transition">Registrar Medida</button>
+
+                    <div class="mt-3 bg-fitDark p-3 rounded-xl border border-gray-800 max-h-40 overflow-y-auto">
+                        <h4 class="text-[11px] uppercase font-bold text-fitOrange mb-2">Historial de Medidas</h4>
+                        <div id="historial-medidas-contenido" class="space-y-1 text-xs text-gray-300">
+                            <p class="text-gray-500">No hay medidas registradas aún.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="mostrarFormulario()" class="w-full py-2 bg-fitGray text-gray-300 rounded-xl text-xs hover:bg-gray-700 transition">Modificar Mis Datos Iniciales</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PIE DE PÁGINA -->
+    <footer class="mt-4 text-center text-xs text-gray-500">
+        &copy; 2026 RM Fitness. Sistema NFC Inteligente.
+    </footer>
+
+    <!-- SCRIPT DE CONFIGURACIÓN Y LÓGICA -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAalPjyksj5NH8z_sNgigGO7wWTPTW0U7Y",
+            authDomain: "rmfitness-ef659.firebaseapp.com",
+            projectId: "rmfitness-ef659",
+            storageBucket: "rmfitness-ef659.firebasestorage.app",
+            messagingSenderId: "658923476263",
+            appId: "1:658923476263:web:626bcd9767d7201afec502",
+            measurementId: "G-Z09KRJ0RXF"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let isRegistering = false;
+        let currentUserUid = null;
+        let weightChart = null;
+
+        function toggleAuthMode() {
+            isRegistering = !isRegistering;
+            const title = document.getElementById('auth-title');
+            const btn = document.getElementById('auth-btn');
+            const toggleBtn = document.getElementById('auth-toggle-btn');
+
+            if (isRegistering) {
+                title.innerText = "Registro de Socio";
+                btn.innerText = "Registrarse";
+                toggleBtn.innerText = "¿Ya tienes cuenta? Inicia sesión";
+            } else {
+                title.innerText = "Acceso de Socios";
+                btn.innerText = "Iniciar Sesión";
+                toggleBtn.innerText = "¿No tienes cuenta? Regístrate aquí";
+            }
+        }
+
+        function handleAuth() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const errorEl = document.getElementById('auth-error');
+            errorEl.innerText = "";
+
+            if (!email || !password) {
+                errorEl.innerText = "Completa todos los campos.";
+                return;
+            }
+
+            if (isRegistering) {
+                auth.createUserWithEmailAndPassword(email, password)
+                    .catch(err => { errorEl.innerText = err.message; });
+            } else {
+                auth.signInWithEmailAndPassword(email, password)
+                    .catch(err => { errorEl.innerText = err.message; });
+            }
+        }
+
+        function logout() {
+            auth.signOut();
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUserUid = user.uid;
+                document.getElementById('user-email-display').innerText = user.email;
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('app-section').classList.remove('hidden');
+                cargarDatosUsuario();
+            } else {
+                currentUserUid = null;
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('app-section').classList.add('hidden');
+            }
+        });
+
+        async function guardarDatosYGenerar() {
+            const nombre = document.getElementById('nombre').value;
+            const edad = document.getElementById('edad').value;
+            const peso = document.getElementById('peso').value;
+            const dias = document.getElementById('dias').value;
+            const objetivo = document.getElementById('objetivo').value;
+
+            if (!nombre || !edad || !peso) {
+                alert("Por favor completa todos los campos.");
+                return;
+            }
+
+            const datosUsuario = { nombre, edad, peso, dias, objetivo, updatedAt: new Date() };
+
+            try {
+                await db.collection('socios').doc(currentUserUid).set(datosUsuario, { merge: true });
+                await db.collection('socios').doc(currentUserUid).collection('progreso').add({
+                    peso: parseFloat(peso),
+                    fecha: new Date().toLocaleDateString()
+                });
+                generarRutinaLocal(datosUsuario);
+            } catch (e) {
+                alert("Error al guardar en la nube: " + e.message);
+            }
+        }
+
+        async function cargarDatosUsuario() {
+            try {
+                const doc = await db.collection('socios').doc(currentUserUid).get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    document.getElementById('nombre').value = data.nombre || '';
+                    document.getElementById('edad').value = data.edad || '';
+                    document.getElementById('peso').value = data.peso || '';
+                    document.getElementById('dias').value = data.dias || '3';
+                    document.getElementById('objetivo').value = data.objetivo || 'Hipertrofia';
+
+                    if (data.nombre) {
+                        generarRutinaLocal(data);
+                    }
+                }
+            } catch (e) {
+                console.error("Error cargando datos:", e);
+            }
+        }
+
+        function generarRutinaLocal(data) {
+            document.getElementById('step-form').classList.add('hidden');
+            document.getElementById('step-routine').classList.remove('hidden');
+
+            document.getElementById('resumen-perfil').innerText = 
+                `${data.nombre} | ${data.edad} años | Inicial: ${data.peso} kg | Objetivo: ${data.objetivo} (${data.dias} días/sem)`;
+
+            let rutinaHTML = "";
+            if (data.dias == "3") {
+                rutinaHTML = `
+                    <div class="space-y-3">
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 1: Cuerpo Completo (Fuerza)</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Sentadilla Libre: <strong>4 series x 8-10 reps</strong></li>
+                                <li>• Press de Banca Plano: <strong>4 series x 8-10 reps</strong></li>
+                                <li>• Remo con Barra: <strong>4 series x 10 reps</strong></li>
+                                <li>• Press Militar con Mancuernas: <strong>3 series x 12 reps</strong></li>
+                                <li>• Curl de Bíceps con Barra: <strong>3 series x 12 reps</strong></li>
+                            </ul>
+                        </div>
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 2: Tren Superior (Pecho y Espalda)</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Dominadas o Jalón al Pecho: <strong>4 series x 10 reps</strong></li>
+                                <li>• Press Inclinado con Mancuernas: <strong>4 series x 10 reps</strong></li>
+                                <li>• Remo en Polea Baja: <strong>3 series x 12 reps</strong></li>
+                                <li>• Aperturas en Polea: <strong>3 series x 15 reps</strong></li>
+                                <li>• Extensión de Tríceps en Polea: <strong>3 series x 12 reps</strong></li>
+                            </ul>
+                        </div>
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 3: Tren Inferior y Core</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Peso Muerto Rumano: <strong>4 series x 8 reps</strong></li>
+                                <li>• Prensa de Piernas: <strong>4 series x 10-12 reps</strong></li>
+                                <li>• Extensiones de Cuádriceps: <strong>3 series x 15 reps</strong></li>
+                                <li>• Curl Femoral Tumbado: <strong>3 series x 15 reps</strong></li>
+                                <li>• Plancha Abdominal: <strong>3 series x 45 segundos</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else if (data.dias == "4") {
+                rutinaHTML = `
+                    <div class="space-y-3">
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 1: Torso A (Enfoque Fuerza)</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Press de Banca: <strong>4 series x 8 reps</strong></li>
+                                <li>• Remo con Barra: <strong>4 series x 8 reps</strong></li>
+                                <li>• Press Militar: <strong>3 series x 10 reps</strong></li>
+                                <li>• Jalón al Pecho: <strong>3 series x 12 reps</strong></li>
+                            </ul>
+                        </div>
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 2: Pierna A (Enfoque Cuádriceps)</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Sentadilla Libre: <strong>4 series x 8 reps</strong></li>
+                                <li>• Prensa Inclinada: <strong>3 series x 10 reps</strong></li>
+                                <li>• Extensiones de Cuádriceps: <strong>3 series x 15 reps</strong></li>
+                                <li>• Elevación de Talones: <strong>4 series x 15 reps</strong></li>
+                            </ul>
+                        </div>
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 3: Torso B (Enfoque Hipertrofia)</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Press Inclinado con Mancuernas: <strong>4 series x 10 reps</strong></li>
+                                <li>• Dominadas asistidas: <strong>3 series x 10 reps</strong></li>
+                                <li>• Elevaciones Laterales: <strong>4 series x 15 reps</strong></li>
+                                <li>• Bíceps y Tríceps Superset: <strong>3 series x 12 reps</strong></li>
+                            </ul>
+                        </div>
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 4: Pierna B (Cadena Posterior)</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Peso Muerto Rumano: <strong>4 series x 8 reps</strong></li>
+                                <li>• Zancadas con Mancuernas: <strong>3 series x 12 pasos</strong></li>
+                                <li>• Curl Femoral: <strong>3 series x 12 reps</strong></li>
+                                <li>• Abdominales en Máquina: <strong>3 series x 15 reps</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else {
+                rutinaHTML = `
+                    <div class="space-y-3">
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 1: Pecho y Tríceps</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Press de Banca Plano: <strong>4 series x 8-10 reps</strong></li>
+                                <li>• Press Inclinado Mancuernas: <strong>3 series x 10 reps</strong></li>
+                                <li>• Aperturas con Poleas: <strong>3 series x 12 reps</strong></li>
+                                <li>• Press Francés con Barra Z: <strong>3 series x 10 reps</strong></li>
+                            </ul>
+                        </div>
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 2: Espalda y Bíceps</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Jalón al Pecho: <strong>4 series x 10 reps</strong></li>
+                                <li>• Remo con Barra: <strong>4 series x 10 reps</strong></li>
+                                <li>• Remo Unilateral: <strong>3 series x 12 reps</strong></li>
+                                <li>• Curl con Barra Bíceps: <strong>3 series x 10 reps</strong></li>
+                            </ul>
+                        </div>
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 3: Pierna Completa</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Sentadilla / Hack Squat: <strong>4 series x 8-10 reps</strong></li>
+                                <li>• Peso Muerto Rumano: <strong>4 series x 10 reps</strong></li>
+                                <li>• Prensa Inclinada: <strong>3 series x 12 reps</strong></li>
+                                <li>• Curl Femoral: <strong>3 series x 15 reps</strong></li>
+                            </ul>
+                        </div>
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 4: Hombros y Abdomen</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Press Militar con Barra: <strong>4 series x 8-10 reps</strong></li>
+                                <li>• Elevaciones Laterales: <strong>4 series x 15 reps</strong></li>
+                                <li>• Pájaros Hombro Posterior: <strong>3 series x 15 reps</strong></li>
+                                <li>• Crunch Abdominal: <strong>3 series x 15 reps</strong></li>
+                            </ul>
+                        </div>
+                        <div class="bg-fitDark p-3 rounded-lg border border-gray-800">
+                            <h4 class="font-bold text-fitOrange mb-2">Día 5: Full Body Intensidad</h4>
+                            <ul class="space-y-1 text-xs text-gray-300">
+                                <li>• Sentadilla Búlgara: <strong>3 series x 10 reps/pierna</strong></li>
+                                <li>• Fondo en Paralelas: <strong>3 series x 10 reps</strong></li>
+                                <li>• Remo en Polea Alta: <strong>3 series x 12 reps</strong></li>
+                                <li>• Curl Concentrado: <strong>3 series x 12 reps</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            document.getElementById('rutina-contenido').innerHTML = rutinaHTML;
+            cargarHistorialPesosGrafico();
+            cargarHistorialMedidas();
+        }
+
+        function mostrarFormulario() {
+            document.getElementById('step-routine').classList.add('hidden');
+            document.getElementById('step-form').classList.remove('hidden');
+        }
+
+        async function registrarProgreso() {
+            const nuevoPeso = document.getElementById('nuevo-peso').value;
+            if (!nuevoPeso) {
+                alert("Ingresa un valor de peso válido.");
+                return;
+            }
+
+            const registro = {
+                peso: parseFloat(nuevoPeso),
+                fecha: new Date().toLocaleDateString()
+            };
+
+            try {
+                await db.collection('socios').doc(currentUserUid).collection('progreso').add(registro);
+                document.getElementById('nuevo-peso').value = '';
+                cargarHistorialPesosGrafico();
+                alert("¡Progreso de peso guardado con éxito!");
+            } catch (e) {
+                alert("Error al guardar progreso: " + e.message);
+            }
+        }
+
+        async function guardarMedidaMuscular() {
+            const musculo = document.getElementById('musculo-nombre').value;
+            const valor = document.getElementById('musculo-valor').value;
+
+            if (!valor) {
+                alert("Por favor ingresa la medida en centímetros.");
+                return;
+            }
+
+            const registroMedida = {
+                musculo: musculo,
+                valor: parseFloat(valor),
+                fecha: new Date().toLocaleDateString()
+            };
+
+            try {
+                await db.collection('socios').doc(currentUserUid).collection('medidas').add(registroMedida);
+                document.getElementById('musculo-valor').value = '';
+                cargarHistorialMedidas();
+                alert("¡Medida de " + musculo + " guardada con éxito!");
+            } catch (e) {
+                alert("Error al guardar medida: " + e.message);
+            }
+        }
+
+        async function cargarHistorialMedidas() {
+            const contenedor = document.getElementById('historial-medidas-contenido');
+            try {
+                const snapshot = await db.collection('socios').doc(currentUserUid).collection('medidas').orderBy('fecha', 'desc').get();
+                if (snapshot.empty) {
+                    contenedor.innerHTML = '<p class="text-gray-500">No hay medidas registradas aún.</p>';
+                    return;
+                }
+                let html = "";
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    html += `<div class="flex justify-between border-b border-gray-800 pb-1"><span>${d.fecha} - <strong>${d.musculo}</strong></span> <span class="text-fitOrange font-bold">${d.valor} cm</span></div>`;
+                });
+                contenedor.innerHTML = html;
+            } catch (e) {
+                console.error("Error cargando medidas:", e);
+            }
+        }
+
+        async function cargarHistorialPesosGrafico() {
+            try {
+                const snapshot = await db.collection('socios').doc(currentUserUid).collection('progreso').get();
+                let fechas = [];
+                let pesos = [];
+
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    fechas.push(d.fecha);
+                    pesos.push(d.peso);
+                });
+
+                const ctx = document.getElementById('pesoChart').getContext('2d');
+                
+                if (weightChart) {
+                    weightChart.destroy();
+                }
+
+                weightChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: fechas,
+                        datasets: [{
+                            label: 'Evolución de Peso (kg)',
+                            data: pesos,
+                            borderColor: '#FF6600',
+                            backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: '#FF6600'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#9CA3AF', font: { size: 10 } },
+                                grid: { color: '#2A2A2A' }
+                            },
+                            y: {
+                                ticks: { color: '#9CA3AF', font: { size: 10 } },
+                                grid: { color: '#2A2A2A' }
+                            }
+                        }
+                    }
+                });
+
+            } catch (e) {
+                console.error("Error cargando historial para gráfico:", e);
+            }
+        }
+    </script>
+</body>
+</html>
