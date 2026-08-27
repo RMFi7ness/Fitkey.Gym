@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitKey Cloud - Tu Entrenador NFC Inteligente</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-md mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="w-9 h-9 bg-emerald-500 rounded-xl flex items-center justify-center font-black text-slate-950 shadow-lg shadow-emerald-500/30">
+                    FK
+                </div>
+                <span class="font-bold text-lg tracking-tight">FitKey <span class="text-emerald-400">Cloud</span></span>
+            </div>
+            <div id="user-badge" class="hidden text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full text-slate-300">
+                Cloud: <span id="nav-username" class="font-semibold text-emerald-400">Socio</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-md w-full mx-auto p-4 pb-20">
+
+        <!-- LOADING SPINNER INITIAL -->
+        <section id="view-loading" class="flex flex-col items-center justify-center py-20 space-y-4">
+            <div class="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-sm text-slate-400">Conectando con la nube del gimnasio...</p>
+        </section>
+
+        <!-- STEP 1: REGISTRATION / INITIAL PROFILE -->
+        <section id="view-onboarding" class="space-y-6 pt-4 hidden">
+            <div class="text-center space-y-2">
+                <span class="inline-block bg-emerald-500/10 text-emerald-400 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-500/20">
+                    Nuevo Socio / NFC Cloud
+                </span>
+                <h1 class="text-2xl font-extrabold tracking-tight">Configura tu perfil fit</h1>
+                <p class="text-sm text-slate-400">Tus datos se guardarán de forma segura en la nube para acceder desde cualquier dispositivo.</p>
+            </div>
+
+            <form id="onboarding-form" class="space-y-4 bg-slate-900/80 backdrop-blur border border-slate-800/80 p-5 rounded-2xl shadow-xl">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nombre Completo</label>
+                    <input type="text" id="name" required placeholder="Ej. Carlos Pérez" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Edad</label>
+                        <input type="number" id="age" required placeholder="25" min="12" max="100"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Peso Actual (kg)</label>
+                        <input type="number" id="weight" required step="0.1" placeholder="75.5"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Objetivo Principal</label>
+                    <select id="goal" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition">
+                        <option value="hypertrophy">Hipertrofia (Ganar Masa Muscular)</option>
+                        <option value="weightloss">Pérdida de Grasa / Definición</option>
+                        <option value="strength">Fuerza y Potencia</option>
+                        <option value="endurance">Resistencia y Condición Física</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Días de Entrenamiento por Semana</label>
+                    <select id="days" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition">
+                        <option value="3">3 Días (Full Body / Frecuencia Alta)</option>
+                        <option value="4" selected>4 Días (Upper / Lower)</option>
+                        <option value="5">5 Días (Rutina Weider / Push-Pull-Legs)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/20 active:scale-[0.98]">
+                    Generar mi Rutina en la Nube 🚀
+                </button>
+            </form>
+        </section>
+
+        <!-- STEP 2: DASHBOARD & ROUTINE GENERATOR -->
+        <section id="view-dashboard" class="space-y-6 hidden pt-2">
+            <!-- User Status Card -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-900/50 border border-slate-800 p-5 rounded-2xl relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-emerald-500/10 rounded-full blur-2xl"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-xs uppercase tracking-wider text-emerald-400 font-bold">Cloud Sync Activo ☁️</span>
+                        <h2 id="dash-name" class="text-xl font-bold mt-0.5">Atleta</h2>
+                    </div>
+                    <button onclick="resetProfile()" class="text-xs text-slate-400 hover:text-white bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
+                        Editar Perfil
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-800/80 text-center">
+                    <div>
+                        <span class="block text-xs text-slate-400">Peso Inicial</span>
+                        <span id="dash-weight-init" class="font-semibold text-sm">-- kg</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs text-slate-400">Objetivo</span>
+                        <span id="dash-goal-text" class="font-semibold text-sm truncate block">--</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs text-slate-400">Frecuencia</span>
+                        <span id="dash-days" class="font-semibold text-sm">-- días</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+                <button onclick="switchTab('routine')" id="tab-routine-btn" class="flex-1 py-2 text-xs font-semibold rounded-lg bg-emerald-500 text-slate-950 transition">
+                    Rutina Asignada
+                </button>
+                <button onclick="switchTab('progress')" id="tab-progress-btn" class="flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+                    Progreso & Nube
+                </button>
+            </div>
+
+            <!-- TAB 1: ROUTINE CONTENT -->
+            <div id="tab-routine-content" class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-sm text-slate-300">Tu Plan de Trabajo Semanal</h3>
+                    <span id="routine-tag" class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">Sincronizado IA</span>
+                </div>
+                <div id="routine-container" class="space-y-3">
+                    <!-- Dynamic Routine injected here -->
+                </div>
+            </div>
+
+            <!-- TAB 2: PROGRESS TRACKER -->
+            <div id="tab-progress-content" class="space-y-4 hidden">
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-3">
+                    <h3 class="font-bold text-sm text-slate-200">Registrar Nuevo Peso en la Nube</h3>
+                    <form id="weight-log-form" class="flex gap-2">
+                        <input type="number" id="new-weight" step="0.1" placeholder="Nuevo peso (kg)" required
+                            class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+                        <button type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-4 py-2 rounded-lg text-sm font-bold transition">
+                            Guardar
+                        </button>
+                    </form>
+                </div>
+
+                <div class="space-y-2">
+                    <h3 class="font-bold text-sm text-slate-300">Historial de Evolución Cloud</h3>
+                    <div id="history-container" class="space-y-2">
+                        <!-- History injected here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FIREBASE CLOUD INITIALIZATION -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Environment variables provided by environment runtime
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'fitkey-gym-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDummyKeyForTemplatePlaceholder",
+            authDomain: "fitkey.firebaseapp.com",
+            projectId: "fitkey-gym"
+        };
+
+        let db, auth, userId;
+        let state = {
+            name: '',
+            age: '',
+            weight: '',
+            goal: '',
+            days: '',
+            history: []
+        };
+
+        // Initialize Firebase safely
+        async function initFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Authentication handling
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                userId = auth.currentUser ? auth.currentUser.uid : crypto.randomUUID();
+                
+                // Try to load existing user cloud document
+                await loadUserData();
+            } catch (err) {
+                console.error("Error conectando con la nube, operando en modo local seguro:", err);
+                // Fallback to local storage if offline or configuration pending
+                loadLocalFallback();
+            }
+        }
+
+        async function loadUserData() {
+            const userDocRef = doc(db, 'artifacts', appId, 'users', userId, 'profile', 'data');
+            const docSnap = await getDoc(userDocRef);
+
+            document.getElementById('view-loading').classList.add('hidden');
+
+            if (docSnap.exists()) {
+                state = docSnap.data();
+                showDashboard();
+            } else {
+                document.getElementById('view-onboarding').classList.remove('hidden');
+            }
+        }
+
+        function loadLocalFallback() {
+            document.getElementById('view-loading').classList.add('hidden');
+            const local = localStorage.getItem('fitkey_cloud_fallback');
+            if (local) {
+                state = JSON.parse(local);
+                showDashboard();
+            } else {
+                document.getElementById('view-onboarding').classList.remove('hidden');
+            }
+        }
+
+        async function saveUserData() {
+            // Save locally immediately for fast UI feedback
+            localStorage.setItem('fitkey_cloud_fallback', JSON.stringify(state));
+
+            // Save to Firebase Cloud
+            if (db && userId) {
+                try {
+                    const userDocRef = doc(db, 'artifacts', appId, 'users', userId, 'profile', 'data');
+                    await setDoc(userDocRef, state);
+                } catch (e) {
+                    console.error("Error guardando en la nube:", e);
+                }
+            }
+        }
+
+        // Onboarding form handler
+        document.getElementById('onboarding-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            state.name = document.getElementById('name').value;
+            state.age = document.getElementById('age').value;
+            state.weight = document.getElementById('weight').value;
+            state.goal = document.getElementById('goal').value;
+            state.days = document.getElementById('days').value;
+            
+            if (!state.history || state.history.length === 0) {
+                state.history = [{
+                    date: new Date().toLocaleDateString(),
+                    weight: state.weight
+                }];
+            }
+
+            await saveUserData();
+            showDashboard();
+        });
+
+        window.resetProfile = async function() {
+            if (confirm("¿Estás seguro de que deseas reconfigurar tu perfil en la nube?")) {
+                localStorage.removeItem('fitkey_cloud_fallback');
+                location.reload();
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('view-onboarding').classList.add('hidden');
+            document.getElementById('view-loading').classList.add('hidden');
+            document.getElementById('view-dashboard').classList.remove('hidden');
+            document.getElementById('user-badge').classList.remove('hidden');
+            document.getElementById('nav-username').textContent = state.name;
+
+            document.getElementById('dash-name').textContent = state.name;
+            document.getElementById('dash-weight-init').textContent = state.weight + ' kg';
+            document.getElementById('dash-days').textContent = state.days + ' días';
+            
+            const goalMap = {
+                'hypertrophy': 'Hipertrofia',
+                'weightloss': 'Definición',
+                'strength': 'Fuerza',
+                'endurance': 'Resistencia'
+            };
+            document.getElementById('dash-goal-text').textContent = goalMap[state.goal] || state.goal;
+
+            renderRoutine();
+            renderHistory();
+        }
+
+        window.switchTab = function(tab) {
+            const routineBtn = document.getElementById('tab-routine-btn');
+            const progressBtn = document.getElementById('tab-progress-btn');
+            const routineContent = document.getElementById('tab-routine-content');
+            const progressContent = document.getElementById('tab-progress-content');
+
+            if (tab === 'routine') {
+                routineBtn.className = "flex-1 py-2 text-xs font-semibold rounded-lg bg-emerald-500 text-slate-950 transition";
+                progressBtn.className = "flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+                routineContent.classList.remove('hidden');
+                progressContent.classList.add('hidden');
+            } else {
+                progressBtn.className = "flex-1 py-2 text-xs font-semibold rounded-lg bg-emerald-500 text-slate-950 transition";
+                routineBtn.className = "flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+                progressContent.classList.remove('hidden');
+                routineContent.classList.add('hidden');
+            }
+        }
+
+        function renderRoutine() {
+            const container = document.getElementById('routine-container');
+            container.innerHTML = '';
+
+            let daysCount = parseInt(state.days);
+            let routineDays = [];
+
+            if (daysCount === 3) {
+                routineDays = [
+                    { title: "Día 1: Full Body A (Fuerza)", exercises: ["Sentadilla libre - 4x8", "Press de banca plano - 4x8", "Remo con barra - 4x10", "Plancha abdominal - 3 series"] },
+                    { title: "Día 2: Full Body B (Hipertrofia)", exercises: ["Peso muerto rumano - 4x10", "Press militar con mancuernas - 3x10", "Dominadas o Jalón polea - 4x10", "Curl de bíceps - 3x12"] },
+                    { title: "Día 3: Full Body C (Metabólico)", exercises: ["Prensa en máquina - 4x12", "Press inclinado mancuernas - 3x12", "Elevaciones laterales - 4x15", "Extensiones de tríceps - 3x12"] }
+                ];
+            } else if (daysCount === 4) {
+                routineDays = [
+                    { title: "Día 1: Tren Superior (Push)", exercises: ["Press de banca plano - 4x8-10", "Press militar de pie - 3x10", "Aperturas en polea - 3x12", "Extensiones de tríceps - 3x12"] },
+                    { title: "Día 2: Tren Inferior (Foco Cuádriceps)", exercises: ["Sentadilla hack o libre - 4x8-10", "Prensa 45° - 3x12", "Extensiones de cuádriceps - 3x15", "Elevación de talones - 4x15"] },
+                    { title: "Día 3: Tren Superior (Pull)", exercises: ["Jalón al pecho - 4x10", "Remo en polea baja - 4x10", "Pájaros para hombro posterior - 3x15", "Curl de bíceps con barra - 3x12"] },
+                    { title: "Día 4: Tren Inferior (Foco Cadena Posterior)", exercises: ["Peso muerto rumano - 4x8-10", "Curl femoral tumbado - 3x12", "Hip thrust con barra - 4x10", "Crunch abdominal en polea - 3x15"] }
+                ];
+            } else {
+                routineDays = [
+                    { title: "Día 1: Push (Pecho / Hombro / Tríceps)", exercises: ["Press de banca - 4x8", "Press inclinado mancuernas - 3x10", "Elevaciones laterales - 4x12", "Press francés - 3x12"] },
+                    { title: "Día 2: Pull (Espalda / Bíceps)", exercises: ["Dominadas - 4x max", "Remo con barra - 4x8", "Jalón supino - 3x12", "Curl con mancuernas tipo martillo - 3x12"] },
+                    { title: "Día 3: Legs (Piernas Completo)", exercises: ["Sentadilla libre - 4x8", "Prensa de pierna - 3x12", "Curl femoral - 3x12", "Elevación de pantorrillas - 4x15"] },
+                    { title: "Día 4: Upper (Torso Enfocado)", exercises: ["Press militar - 4x8", "Remo en T - 4x10", "Fondos en paralelas - 3x10", "Curl predicador - 3x12"] },
+                    { title: "Día 5: Lower (Piernas Resistencia)", exercises: ["Peso muerto - 3x6", "Zancadas búlgaras - 3x10 por pierna", "Extensiones cuádriceps - 3x15", "Plancha abdominal con peso - 3 series"] }
+                ];
+            }
+
+            routineDays.forEach((day, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-bold text-sm text-emerald-400">${day.title}</h4>
+                        <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Sesión ${index + 1}</span>
+                    </div>
+                    <ul class="space-y-1 pt-1">
+                        ${day.exercises.map(ex => `<li class="text-xs text-slate-300 flex items-center space-x-2"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span><span>${ex}</span></li>`).join('')}
+                    </ul>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Weight Logging Handler
+        document.getElementById('weight-log-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const val = parseFloat(document.getElementById('new-weight').value);
+            if (!val) return;
+
+            state.history.unshift({
+                date: new Date().toLocaleDateString(),
+                weight: val
+            });
+
+            await saveUserData();
+            renderHistory();
+            document.getElementById('new-weight').value = '';
+        });
+
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+
+            state.history.expanded = state.history || [];
+            state.history.forEach((entry, idx) => {
+                const item = document.createElement('div');
+                item.className = "flex justify-between items-center bg-slate-900 border border-slate-800/80 px-4 py-3 rounded-xl text-xs";
+                item.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <span class="font-mono text-slate-400">${entry.date}</span>
+                        ${idx === 0 ? '<span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-1.5 py-0.5 rounded font-medium">Actual</span>' : ''}
+                    </div>
+                    <span class="font-bold text-sm text-white">${entry.weight} kg</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Start initialization on load
+        window.addEventListener('DOMContentLoaded', initFirebase);
+    </script>
+</body>
+</html>
